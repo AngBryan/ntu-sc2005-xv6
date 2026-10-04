@@ -145,7 +145,7 @@ UPROGS=\
 	$U/_zombie\
 	$U/_pingpong\
 	$U/_proccount\
-	$U/_pingpong2\
+	$U/_two_pipes\
 
 fs.img: mkfs/mkfs README $(UPROGS)
 	mkfs/mkfs fs.img README $(UPROGS)
