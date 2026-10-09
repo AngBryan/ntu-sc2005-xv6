@@ -442,7 +442,7 @@ wait(uint64 addr)
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
 void
-scheduler(void)
+scheduler_old(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
@@ -475,6 +475,63 @@ scheduler(void)
       }
       release(&p->lock);
     }
+    if(found == 0) {
+      // nothing to run; stop running on this core until an interrupt.
+      asm volatile("wfi");
+    }
+  }
+}
+
+//WITH EVEN PID Priority
+void
+scheduler(void)
+{
+  struct proc *p;
+  struct cpu *c = mycpu();
+
+  c->proc = 0;
+  for(;;){
+    // The most recent process to run may have had interrupts
+    // turned off; enable them to avoid a deadlock if all
+    // processes are waiting. Then turn them back off
+    // to avoid a possible race between an interrupt
+    // and wfi.
+    intr_on();
+    intr_off();
+
+    int found = 0;
+
+    // Pass 1: Scan exclusively for RUNNABLE processes with even PIDs.
+    for(p = proc; p < &proc[NPROC]; p++) {
+      acquire(&p->lock);
+      if(p->state == RUNNABLE && p->pid % 2 == 0) {
+        // Switch to chosen process.
+        p->state = RUNNING;
+        c->proc = p;
+        swtch(&c->context, &p->context);
+
+        // Process is done running for now.
+        c->proc = 0;
+        found = 1;
+      }
+      release(&p->lock);
+    }
+
+    // Pass 2: Scan for odd PIDs only if no even-PID process was found.
+    if(found == 0) {
+      for(p = proc; p < &proc[NPROC]; p++) {
+        acquire(&p->lock);
+        if(p->state == RUNNABLE && p->pid % 2 != 0) {
+          p->state = RUNNING;
+          c->proc = p;
+          swtch(&c->context, &p->context);
+          c->proc = 0;
+          found = 1;
+        }
+        release(&p->lock);
+      }
+    }
+
     if(found == 0) {
       // nothing to run; stop running on this core until an interrupt.
       asm volatile("wfi");
