@@ -442,7 +442,7 @@ wait(uint64 addr)
 //  - eventually that process transfers control
 //    via swtch back to the scheduler.
 void
-scheduler_old(void)
+scheduler(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
@@ -484,7 +484,7 @@ scheduler_old(void)
 
 //WITH EVEN PID Priority
 void
-scheduler(void)
+scheduler_even(void)
 {
   struct proc *p;
   struct cpu *c = mycpu();
