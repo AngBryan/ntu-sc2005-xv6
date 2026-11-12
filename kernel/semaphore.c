@@ -63,9 +63,15 @@ sem_wait(int semid)
     return -1;
  
   // TODO Retrieve semaphore: uncomment below
-  // struct semaphore *sem = &semaphores[semid];
+  struct semaphore *sem = &semaphores[semid];
+  acquire(&sem->lock); // NOT sem_table_lock that is for allocation table. &(sem->lock) address of sem's lock 
   // TODO sleep while semaphore is zero
+  while(sem->value==0){
+    sleep(sem, &sem->lock); //sem is a pointer so we want to give it the address
+  }
   // TODO decrement semaphore value atomically
+  sem->value--;
+  release(&sem->lock);
   return 0;
 }
 
@@ -76,8 +82,12 @@ sem_signal(int semid)
     return -1;
 
   // TODO Retrieve semaphore: uncomment below
-  // struct semaphore *sem = &semaphores[semid];
+  struct semaphore *sem = &semaphores[semid];
+  acquire(&sem->lock); //REMEMBER TO ACQUIRE AND RELEASE
   // TODO increment semaphore value atomically, notifying sleeping processes
+  sem->value++;
+  wakeup(sem); //wakeup the chem from earlier ie sem NOT &sem->lock
+  release(&sem->lock);
   return 0;
 }
 
@@ -87,5 +97,8 @@ sem_getvalue(int semid)
   if(semid < 0 || semid >= MAX_SEMAPHORES || !semaphores[semid].in_use)
     return -1;
   // TODO return value of semid atomically
-  return -1;
+  acquire(&semaphores[semid]);
+  int value = (&semaphores[semid])->value;
+  release(&semaphores[semid]);
+  return value;
 }
