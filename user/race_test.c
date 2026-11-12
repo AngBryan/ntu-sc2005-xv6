@@ -32,14 +32,20 @@ void do_work(int pid, int semid) {
     for (int i = 0; i < N; i++) {
         // TODO: increment a shared counter, making sure to use avoid race condition.
         // Tip: use a semaphore.
-        int val = ucnt_get(0);
-        ucnt_set(0, val + 1);
+        //sem_wait(semid);
+        T_ASSERT(sem_wait(semid) == 0); // Same as above just that we check
+        int val = ucnt_get(0); // Read
+        ucnt_set(0, val + 1); //Write
+        //sem_signal(semid);
+        T_ASSERT(sem_signal(semid) == 0);
     }
 }
 
 void race_test() {
     ucnt_set(0, 0);
-    int semid = -1; // TODO: create semaphore properly
+    // TODO: create semaphore properly
+    int semid = sem_init(1);       // was: int semid = -1;
+    T_ASSERT(semid >= 0); //T_ASSERT is just an assert function ton ensure run as expected
 
     int pid = fork();
     T_ASSERT(pid >= 0);
@@ -48,8 +54,8 @@ void race_test() {
         exit(0);
     } else { // parent
         do_work(getpid(), semid);
-        wait(0);
-        int final = ucnt_get(0);
+        wait(0); //Checkpoint 4: wait before validating and free sephomore? sem_free only makrs slot unused/ doesnt wait for child or wake anyone
+        int final = ucnt_get(0); 
         printf("[race_test] final counter=%d (expected %d)\n", final, 2*N);
         T_ASSERT(final == 2*N);
         printf("[race_test] PASS: consistent counter\n");
