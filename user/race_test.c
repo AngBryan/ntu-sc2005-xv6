@@ -126,6 +126,7 @@ void producer_consumer() {
     }
     printf("[producer_consumer] PASS: message delivered\n");
     // TODO clean-up semaphores
+    //Note sem_free sets in_use to 0 it doesnt wait for/wake anyone > run at the end
     sem_free(b.empty_semid);             // now safe: nobody uses them anymore
     sem_free(b.full_semid);
     sem_free(b.free_semid);
