@@ -66,21 +66,32 @@ void race_test() {
 
 struct buf_sem {
     // TODO: add semaphores as required
+    int free_semid;
+    int full_semid;
+    int empty_semid;
 };
 
 void consumer(struct buf_sem b, int loops, int valid[]) {
     char tmp;
     for(int i = 0; i < loops; i++) {
         // TODO: wait buffer slot full and signal empty slot 
+        sem_wait(b.full_semid); // wait if not full (value = 0), start consume once full aka > 0
+        sem_wait(b.free_semid);
         tmp = ubuf_read();
         T_ASSERT(valid[(unsigned char)tmp]);
+        sem_signal(b.free_semid);
+        sem_signal(b.empty_semid); // increment and tell others it is not empty 
     }
 }
 
 void producer(const char* msg, struct buf_sem b) {
     for (const char* p = msg; *p != '\0'; p++) {
         // TODO: wait buffer slot emtpy and signal used slot
+        sem_wait(b.empty_semid); // wait if not empty (value = 0), start produce once empty aka > 0
+        sem_wait(b.free_semid);
         ubuf_write(*p);
+        sem_signal(b.free_semid);
+        sem_signal(b.full_semid); //increment and tell others it is full
     }
 }
 
@@ -96,6 +107,9 @@ void producer_consumer() {
 
     struct buf_sem b;
     // TODO init semaphores as required
+    b.empty_semid = sem_init(UBUF_SIZE); //since we set UBUF_SIZE = 16, producer can straight away start to produce while consumer waits
+    b.full_semid = sem_init(0);
+    b.free_semid = sem_init(1);
 
     for (int i = 0; i < NUM_PROD; i++) {
         int pid = fork();
@@ -112,6 +126,9 @@ void producer_consumer() {
     }
     printf("[producer_consumer] PASS: message delivered\n");
     // TODO clean-up semaphores
+    sem_free(b.empty_semid);             // now safe: nobody uses them anymore
+    sem_free(b.full_semid);
+    sem_free(b.free_semid);
 }
 
 
