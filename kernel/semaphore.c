@@ -97,8 +97,8 @@ sem_getvalue(int semid)
   if(semid < 0 || semid >= MAX_SEMAPHORES || !semaphores[semid].in_use)
     return -1;
   // TODO return value of semid atomically
-  acquire(&semaphores[semid]);
+  acquire(&semaphores[semid].lock);
   int value = (&semaphores[semid])->value;
-  release(&semaphores[semid]);
+  release(&semaphores[semid].lock);
   return value;
 }
